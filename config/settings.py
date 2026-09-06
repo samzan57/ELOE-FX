@@ -1,82 +1,85 @@
-# config/settings.py
+# config/settings.py  (v2 — rebuild institutionnel)
 
-# ===== Connexion IBKR (Paper) =====
-HOST = "127.0.0.1"
-PORT = 7497           # 7497 = Paper, 7496 = Live
-CLIENT_ID = 15
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ===== Connexion IBKR =====
+# Host/port/client ID configurables via .env (voir .env.example) — le port
+# dépend de ta configuration (paper/live, TWS/Gateway), voir la documentation IBKR.
+HOST = os.getenv("IBKR_HOST", "127.0.0.1")
+PORT = os.getenv("IBKR_PORT")
+if not PORT:
+    raise ValueError("IBKR_PORT non défini — renseigne-le dans ton .env (voir .env.example).")
+PORT = int(PORT)
+CLIENT_ID = int(os.getenv("IBKR_CLIENT_ID", "15"))
 IB_RESQUEST_TIMEOUT = 30
 IB_CONNECT_READONLY = False
+IB_ACCOUNT = None              # ex "DU1234567" ou None pour 1er compte
 
 # ===== Compte & Risque =====
 CAPITAL = 10_000
-RISK_PER_TRADE = 0.005         # 0.5% du capital par trade
-RR = 2.0                       # ratio TP/SL optimisé
+RISK_PER_TRADE = 0.01          # 1% max par trade (plafond Kelly)
+RR = 2.0                       # ratio TP/SL
+KELLY_FRACTION = 0.25          # Kelly fractionnel 25% (standard quant)
 
 # ===== Marchés & Session =====
-PAIRS = ["EURUSD"]             # mono-paire pour l’instant
+PAIRS = ["EURUSD"]
 TZ = "Europe/Paris"
-SESSION_START = (14, 0)        # 14:00 Paris (été)
-SESSION_END   = (18, 0)        # 18:00 Paris
+SESSION_START = (9, 0)         # 9h Paris = ouverture Londres
+SESSION_END   = (18, 0)        # 18h Paris = fermeture NY
 
-# ===== Indicateurs / Stops (optimisés) =====
+# ===== Indicateurs / Stops =====
 ATR_LEN = 14
-RSI_LEN = 14
-BREAKOUT_LOOKBACK = 30         # (garde ce nom, le code l’utilise)
-ATR_K = 1.5
+ATR_K = 1.5                    # stop = ATR × ATR_K
 MIN_STOP_PIPS = 8
-RSI_MIN = 55
 
-# Filtre breakout
-BREAKOUT_USE_HIGH_LOW = True     # True: casse sur high/low (plus réactif)
-BREAKOUT_BUFFER_PIPS = 0.05      # buffer anti "touch-and-go"
+# ===== Paramètres signaux (tunable) =====
+SIGNAL_VWAP_Z     = 1.6        # distance VWAP — plus sélectif (1.2 → 1.6)
+SIGNAL_RSI_LO     = 35.0       # RSI oversold — seulement les extrêmes (40 → 35)
+SIGNAL_RSI_HI     = 65.0       # RSI overbought — seulement les extrêmes (60 → 65)
+ADX_MAX           = 25.0       # filtre tendance plus strict (28 → 25)
+ADX_MIN_MOMENTUM  = 18.0       # ADX minimum pour signaux momentum
 
 # ===== Sécurité =====
-IGNORE_SESSION = False  # temporaire pour tests
-DRY_RUN = False
-MAX_DAILY_DRAWDOWN = 0.02      # 2% du capital
-MAX_SPREAD_PIPS = 0.21            # ex: 0.2 pip (EURUSD)
-RUN_LOOP_MINUTES = 60        # écoute pendant 1h
-SLEEP_BETWEEN_SEC = 20       # scan toutes les 20s
+IGNORE_SESSION    = False
+DRY_RUN           = False
+MAX_DAILY_DRAWDOWN = 0.02      # 2% du capital → kill switch
+MAX_SPREAD_PIPS   = 0.30       # spread max toléré en pips
+RUN_LOOP_MINUTES  = 480        # durée de la boucle live (8h = session complète)
+SLEEP_BETWEEN_SEC = 20         # scan toutes les 20s
 
 # ===== Marché / Données =====
-BAR_DURATION_DAYS = 1          # historique à récupérer
-BAR_SIZE = "1 min"             # granularité IBKR
-WHAT_TO_SHOW = "MIDPOINT"      # ou 'BID_ASK'
-PRICE_TIMEOUT_SEC = 30.0       # timeout pour attendre un prix live
+BAR_DURATION_DAYS = 2          # historique intraday (2 jours pour VWAP stable)
+BAR_SIZE          = "1 min"
+WHAT_TO_SHOW      = "MIDPOINT"
+PRICE_TIMEOUT_SEC = 30.0
 
 # ===== Ordres =====
-PARENT_ORDER_TYPE = "MKT"      # exécution rapide intraday
+PARENT_ORDER_TYPE = "MKT"
 TAKE_ORDER_TYPE   = "LMT"
 STOP_ORDER_TYPE   = "STP"
 TIF = "GTC"
 
-# ===== Sizing / Arrondis =====
-MIN_QTY = 1000                 # taille mini (1k)
-QTY_STEP = 1000                # pas d'arrondi (1k)
+# ===== Sizing =====
+MIN_QTY  = 1_000
+QTY_STEP = 1_000
 
-# ===== Gestion session / Exposition =====
+# ===== Gestion exposition =====
 MAX_CONCURRENT_POSITIONS = 1
 REENTER_COOLDOWN_MIN = 15
 
-# ===== Filtre volatilité (optionnel) =====
-USE_VOL_FILTER = False
-ATR_QTL = 0.4
-
-# ===== Modèle ML =====
-MODEL_PATH = "models/model_eurusd_buy.pkl"
-MODEL_EV_THRESHOLD = 0.505     # seuil proba (EV>0) issu du notebook
+# ===== Modèles ML (LightGBM v2) =====
+MODEL_PATH      = "models/model_eurusd_buy.pkl"
 SELL_MODEL_PATH = "models/model_eurusd_sell.pkl"
-SELL_MODEL_EV_THRESHOLD = 0.505  # (sera remplacé par threshold du pickle si tu lis le champ)
 
-# --- Kill-switch ---
-USE_KILL_SWITCH = True
-KILL_MODE = "netliq"           # 'auto' | 'pnl' | 'netliq' | 'off'
-KILL_SANITY_MULT = 0.25      # si |dailyPnL| > 25% * CAPITAL => suspect, on ignore
-KILL_CONFIRM_SCANS = 2       # nb de scans consécutifs sous seuil avant STOP
-IB_ACCOUNT = None            # ex "DU1234567" ou None pour 1er compte
-KILL_REF = "netliq"         # "capital" ou "netliq"
-
-
+# ===== Kill-switch =====
+USE_KILL_SWITCH  = True
+KILL_MODE        = "netliq"    # ‘auto’ | ‘pnl’ | ‘netliq’ | ‘off’
+KILL_REF         = "netliq"
+KILL_SANITY_MULT = 0.25
+KILL_CONFIRM_SCANS = 2
 
 # --- Note DST ---
 # SESSION_START/END sont en heure locale Europe/Paris (gère été/hiver automatiquement).

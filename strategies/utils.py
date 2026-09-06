@@ -1,6 +1,6 @@
 # strategies/utils.py
 from ib_insync import *
-from datetime import datetime, time as dtime
+from datetime import datetime, timezone
 import pytz
 import numpy as np
 import pandas as pd
@@ -51,8 +51,10 @@ def pip_size(pair: str) -> float:
     return 0.01 if pair.endswith("JPY") else 0.0001
 
 def pip_value_per_unit(pair: str) -> float:
-    # Pour XXXUSD (EURUSD, GBPUSD...) : approx pip value par unité = pip_size (USD)
-    return pip_size(pair)
+    # Valeur d'un pip pour un lot standard (100 000 unités) en USD
+    # EUR/USD, GBP/USD, AUD/USD, NZD/USD → $10 par pip par lot standard
+    # USD/JPY, USD/CHF, USD/CAD → ~$10 (approximation valable pour sizing)
+    return 10.0
 
 # --- Prix & Historique ---
 def wait_for_price(ib: IB, contract: Contract, timeout: float = None):
@@ -134,6 +136,6 @@ def fetch_bars(
 # --- Logging ---
 def log_trade(pair, side, qty, entry, stop, take, status, info=""):
     ensure_paths()
-    line = f"{datetime.utcnow().isoformat()}Z,{pair},{side},{qty},{entry:.5f},{stop:.5f},{take:.5f},{status},{info}\n"
+    line = f"{datetime.now(timezone.utc).isoformat()},{pair},{side},{qty},{entry:.5f},{stop:.5f},{take:.5f},{status},{info}\n"
     with LOG_TRADES.open("a", encoding="utf-8") as f:
         f.write(line)

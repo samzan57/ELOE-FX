@@ -17,6 +17,7 @@ from strategies.utils import (
     pip_value_per_unit, pip_size, now_in_tz, in_session, ensure_paths
 )
 from strategies.indicators import compute_indicators
+from strategies.telegram_notify import send as tg
 
 # ---------- ML features builder (robuste) ----------
 try:
@@ -272,6 +273,7 @@ def place_bracket(ib: IB, contract: Contract, plan: OrderPlan):
     if S.DRY_RUN:
         print(f"[DRY_RUN] {plan.pair} {plan.side} qty={plan.qty} entry~{plan.entry:.5f} SL={plan.stop:.5f} TP={plan.take:.5f}")
         log_trade(plan.pair, plan.side, plan.qty, plan.entry, plan.stop, plan.take, "DRY_RUN", "not sent")
+        tg(f"🧪 ELOE-FX DRY-RUN\n{plan.pair} {plan.side} qty={plan.qty}\nEntry~{plan.entry:.5f} | SL={plan.stop:.5f} | TP={plan.take:.5f}")
         return
 
     ib.placeOrder(contract, parent)
@@ -279,6 +281,7 @@ def place_bracket(ib: IB, contract: Contract, plan: OrderPlan):
     ib.placeOrder(contract, stop)
     print(f"[PLACED] {plan.pair} {plan.side} qty={plan.qty} SL={plan.stop:.5f} TP={plan.take:.5f}")
     log_trade(plan.pair, plan.side, plan.qty, plan.entry, plan.stop, plan.take, "PLACED")
+    tg(f"✅ ELOE-FX — Ordre placé\n{plan.pair} {plan.side} qty={plan.qty}\nEntry~{plan.entry:.5f} | SL={plan.stop:.5f} | TP={plan.take:.5f}")
 
 def get_spread_pips(ib: IB, contract: Contract, pair: str) -> float:
     """Retourne le spread en pips (bid/ask) ou 1e9 si indisponible."""

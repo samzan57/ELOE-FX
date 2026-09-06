@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtualenv
+venv/
+env/
+ENV/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Monitoring/live artifacts — not portfolio results, some contain account IDs
+data/logs/netliq_baseline.csv
+data/logs/trades.csv
+data/logs/pnl.csv
+
+# Pytest
+.pytest_cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
